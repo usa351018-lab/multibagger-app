@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Multibagger Stock Screener</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh}
+input,select,textarea{outline:none;font-family:inherit}
+input::placeholder,textarea::placeholder{color:#475569}
+select option{background:#1e293b;color:#f1f5f9}
+.card{background:#1e293b;border-radius:12px;padding:16px;margin-bottom:16px}
+.inp{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:14px;display:block;margin-bottom:10px}
+.sec-title{color:#38bdf8;font-size:15px;font-weight:700;margin-bottom:12px}
+.btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
+.btn-primary:disabled{background:#334155;cursor:not-allowed}
+.btn-sec{padding:13px 16px;background:#1e293b;color:#94a3b8;border:none;border-radius:10px;cursor:pointer;font-size:15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.mbox{background:#0f172a;border-radius:8px;padding:10px}
+.sbar-bg{background:#1e293b;border-radius:99px;height:12px;overflow:hidden;margin-bottom:8px}
+.sbar{height:100%;border-radius:99px;transition:width .6s}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:1px solid #334155;display:flex;z-index:10}
+.nbtn{flex:1;padding:10px 4px;background:none;border:none;color:#475569;font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;border-top:2px solid transparent}
+.nbtn.active{color:#38bdf8;border-top-color:#38bdf8;font-weight:700}
+.tab{display:none}.tab.active{display:block}
+.hdr{background:linear-gradient(135deg,#1e293b,#0f172a);padding:16px 16px 12px;border-bottom:1px solid #334155;position:sticky;top:0;z-index:10}
+.content{max-width:600px;margin:0 auto;padding:16px 12px 100px}
+.badge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;display:inline-block}
+.ba{background:#1e1b4b;color:#a78bfa}
+.bm{background:#1e293b;color:#94a3b8}
+.stat{background:#1e293b;border-radius:12px;padding:12px;text-align:center}
+.pitm{border-radius:12px;padding:16px;margin-bottom:12px}
+.lbar{height:4px;border-radius:99px;background:#1e293b;overflow:hidden;margin-top:8px}
+.lbar-in{height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#0ea5e9);animation:lf 1.5s ease infinite alternate}
+@keyframes lf{from{width:5%}to{width:95%}}
+.disc{text-align:center;color:#334155;font-size:10px;margin-top:8px}
+textarea.inp{resize:vertical;min-height:70px}
+.ai-thinking{text-align:center;padding:24px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="max-width:600px;margin:0 auto;display:flex;align-items:center;gap:10px">
+    <span style="font-size:28px">📊</span>
+    <div>
+      <h1 style="font-size:18px;color:#38bdf8;font-weight:800">Multibagger Screener</h1>
+      <p style="color:#475569;font-size:11px">AI Powered Auto-Fill</p>
+    </div>
+    <div id="pbadge" style="display:none;margin-left:auto;background:#0ea5e9;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:700">💼 <span id="pcnt">0</span></div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- TAB 0: SCREENER -->
+  <div class="tab active" id="tab0">
+    <div class="card">
+      <p class="sec-title">🏷️ Stock Info</p>
+      <div style="position:relative">
+        <input class="inp" id="sName" placeholder="Stock naam likho → AI auto-fill karega! (e.g. Tata Power, BEL, Zomato)"/>
+        <span id="spin" style="display:none;position:absolute;right:12px;top:10px;color:#a78bfa;font-size:13px">🤖</span>
+      </div>
+      <div id="afStatus" style="display:none"></div>
+      <select class="inp" id="sSec">
+        <option value="">-- Sector chunein --</option>
+        <option>Technology/IT</option><option>Defence</option><option>Renewable Energy</option>
+        <option>Pharma</option><option>EV/Auto</option><option>Specialty Chemicals</option>
+        <option>FMCG</option><option>Banking/NBFC</option><option>Infrastructure</option><option>Other</option>
+      </select>
+      <div class="grid2">
+        <input class="inp" style="margin:0" type="number" id="sPrice" placeholder="Buy Price (₹)"/>
+        <input class="inp" style="margin:0" type="number" id="sQty" placeholder="Quantity"/>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sec-title">📋 Financial Metrics (<span id="fcnt">0</span>/10)</p>
+      <p style="color:#64748b;font-size:12px;margin-bottom:12px">Stock naam likhte hi AI auto-fill karega — manually bhi edit kar sakte ho</p>
+      <div class="grid2" id="mgrid"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button class="btn-primary" id="abtn" onclick="doAnalyse()" disabled>🔍 Analyse Karo</button>
+      <button class="btn-sec" onclick="doReset()">🔄</button>
+    </div>
+    <div id="rbox"></div>
+  </div>
+
+  <!-- TAB 1: AI -->
+  <div class="tab" id="tab1">
+    <div class="card">
+      <p class="sec-title">🤖 AI Stock Analyst</p>
+      <input class="inp" id="aiNm" placeholder="Stock naam (e.g. Zomato, BEL, Tata Power)"/>
+      <select class="inp" id="aiSec">
+        <option value="">-- Sector (optional) --</option>
+        <option>Technology/IT</option><option>Defence</option><option>Renewable Energy</option>
+        <option>Pharma</option><option>EV/Auto</option><option>Specialty Chemicals</option>
+        <option>FMCG</option><option>Banking/NBFC</option><option>Infrastructure</option><option>Other</option>
+      </select>
+      <textarea class="inp" id="aiExtra" placeholder="Koi aur info? (optional)"></textarea>
+      <button id="aibtn" onclick="doAI()" style="width:100%;padding:13px;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">🤖 AI Se Analyse Karwao</button>
+    </div>
+    <div id="aiRes"></div>
+  </div>
+
+  <!-- TAB 2: COMPARE -->
+  <div class="tab" id="tab2">
+    <div class="card">
+      <p class="sec-title">📊 Stocks Compare Karo</p>
+      <div id="clist"></div>
+      <div id="cload" style="display:none;color:#a78bfa;font-size:12px;text-align:center;padding:8px">🤖 AI auto-fill kar raha hai...</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="addCRow()" style="flex:1;padding:10px;background:#1e293b;color:#94a3b8;border:1px dashed #334155;border-radius:8px;cursor:pointer">+ Add Stock</button>
+        <button onclick="doCompare()" style="flex:2;padding:10px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">📊 Compare Karo</button>
+      </div>
+    </div>
+    <div id="cres"></div>
+  </div>
+
+  <!-- TAB 3: PORTFOLIO -->
+  <div class="tab" id="tab3">
+    <div id="pbox"></div>
+  </div>
+
+  <p class="disc">⚠️ Sirf educational purpose. SEBI-registered advisor se salah lein.</p>
+</div>
+
+<div class="bnav">
+  <button class="nbtn active" onclick="swTab(0,this)"><span style="font-size:18px">🔍</span>Screener</button>
+  <button class="nbtn" onclick="swTab(1,this)"><span style="font-size:18px">🤖</span>AI Analysis</button>
+  <button class="nbtn" onclick="swTab(2,this)"><span style="font-size:18px">📊</span>Compare</button>
+  <button class="nbtn" onclick="swTab(3,this)"><span style="font-size:18px">💼</span>Portfolio</button>
+</div>
+
+<script>
+var CR=[
+  {id:"roe",lb:"ROE",un:"%",mn:15,mx:null,ds:"≥15%"},
+  {id:"roce",lb:"ROCE",un:"%",mn:15,mx:null,ds:"≥15%"},
+  {id:"debtEq",lb:"Debt/Equity",un:"",mn:null,mx:0.5,ds:"≤0.5"},
+  {id:"salesGrowth",lb:"Sales Growth 3Y",un:"%",mn:15,mx:null,ds:"≥15%"},
+  {id:"profitGrowth",lb:"Profit Growth 3Y",un:"%",mn:15,mx:null,ds:"≥15%"},
+  {id:"promoterHolding",lb:"Promoter Holding",un:"%",mn:40,mx:null,ds:"≥40%"},
+  {id:"pledged",lb:"Pledged Shares",un:"%",mn:null,mx:5,ds:"≤5%"},
+  {id:"peg",lb:"PEG Ratio",un:"",mn:null,mx:1,ds:"≤1"},
+  {id:"currentRatio",lb:"Current Ratio",un:"",mn:1.5,mx:null,ds:"≥1.5"},
+  {id:"pat",lb:"PAT Margin",un:"%",mn:8,mx:null,ds:"≥8%"}
+];
+var CMP=["roe","roce","debtEq","salesGrowth","profitGrowth","promoterHolding"];
+var mVals={},mSrc={},portfolio=JSON.parse(localStorage.getItem("mbp")||"[]"),ccnt=0,ndeb=null,cdeb={};
+
+function chkP(c,v){var n=parseFloat(v);if(isNaN(n))return null;if(c.mn!==null&&c.mx===null)return n>=c.mn;if(c.mx!==null&&c.mn===null)return n<=c.mx;return null;}
+function getScore(vals){var s=0;CR.forEach(function(c){if(chkP(c,vals[c.id])===true)s++;});return{score:s,pct:Math.round(s/CR.length*100)};}
+function getRat(pct){if(pct>=80)return{lb:"🚀 Strong Multibagger",cl:"#22c55e",bg:"#052e16"};if(pct>=60)return{lb:"📈 Potential Multibagger",cl:"#facc15",bg:"#1c1a00"};if(pct>=40)return{lb:"🔍 Average - Watch Karo",cl:"#fb923c",bg:"#1c0a00"};return{lb:"❌ Multibagger Nahi",cl:"#f87171",bg:"#1c0000"};}
+function fmt(v){return parseFloat(parseFloat(v).toFixed(2));}
+function savePf(){localStorage.setItem("mbp",JSON.stringify(portfolio));var b=document.getElementById("pbadge"),c=document.getElementById("pcnt");if(portfolio.length>0){b.style.display="";c.textContent=portfolio.length;}else b.style.display="none";}
+function swTab(i,btn){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});document.querySelectorAll(".nbtn").forEach(function(b){b.classList.remove("active");});document.getElementById("tab"+i).classList.add("active");btn.classList.add("active");if(i===3)renderPf();}
+
+// BUILD METRICS GRID
+(function(){
+  var g=document.getElementById("mgrid");
+  CR.forEach(function(c){
+    var d=document.createElement("div");
+    d.className="mbox";d.id="mb_"+c.id;
+    d.innerHTML='<div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#94a3b8;font-weight:600">'+c.lb+'</span><span id="ps_'+c.id+'" style="font-size:12px"></span></div>'
+      +'<p style="font-size:10px;color:#475569;margin:2px 0 4px">'+c.ds+'</p>'
+      +'<div id="sr_'+c.id+'" style="margin-bottom:4px"></div>'
+      +'<input type="number" id="m_'+c.id+'" placeholder="Value'+(c.un?' ('+c.un+')':'')+'" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #1e293b;background:#1e293b;color:#f1f5f9;font-size:12px" oninput="onMC(\''+c.id+'\',this.value)"/>';
+    g.appendChild(d);
+  });
+})();
+
+function onMC(id,v){
+  mVals[id]=v;mSrc[id]="manual";
+  var c=CR.find(function(x){return x.id===id;});
+  var pe=document.getElementById("ps_"+id);if(pe)pe.textContent=chkP(c,v)===true?"✅":chkP(c,v)===false?"❌":"";
+  var se=document.getElementById("sr_"+id);if(se)se.innerHTML='<span class="badge bm">✏️ Manual</span>';
+  updFC();
+}
+function updFC(){
+  var f=CR.filter(function(c){return mVals[c.id]!==undefined&&mVals[c.id]!=="";}).length;
+  document.getElementById("fcnt").textContent=f;
+  document.getElementById("abtn").disabled=f===0;
+}
+function setM(id,v,src){
+  mVals[id]=String(v);mSrc[id]=src;
+  var el=document.getElementById("m_"+id);if(el)el.value=v;
+  var c=CR.find(function(x){return x.id===id;});
+  var p=chkP(c,v);
+  var pe=document.getElementById("ps_"+id);if(pe)pe.textContent=p===true?"✅":p===false?"❌":"";
+  var se=document.getElementById("sr_"+id);if(se)se.innerHTML='<span class="badge ba">🤖 AI</span>';
+  var be=document.getElementById("mb_"+id);if(be)be.style.border="1px solid #6366f144";
+}
+
+// ── CORE: AI AUTO FILL ──
+async function callAI(prompt, maxTokens){
+  var res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens||600,messages:[{role:"user",content:prompt}]})
+  });
+  var data=await res.json();
+  return (data.content&&data.content[0]&&data.content[0].text)||"{}";
+}
+
+async function aiAutoFill(nm,sec){
+  var prompt='You are an expert Indian stock market analyst with deep knowledge of NSE/BSE listed companies.\n\nFor the Indian stock: "'+nm+'" (Sector: '+(sec||"Auto-detect")+')\n\nProvide realistic estimated financial metrics based on your knowledge. Return ONLY a valid JSON object, no explanation, no markdown.\n\nRequired JSON format:\n{\n  "roe": <Return on Equity in %>,\n  "roce": <Return on Capital Employed in %>,\n  "debtEq": <Debt to Equity ratio>,\n  "salesGrowth": <3 year revenue CAGR in %>,\n  "profitGrowth": <3 year profit CAGR in %>,\n  "promoterHolding": <Promoter holding in %>,\n  "pledged": <Pledged shares in %>,\n  "peg": <PEG ratio>,\n  "currentRatio": <Current ratio>,\n  "pat": <PAT margin in %>,\n  "detectedSector": "<detected sector name>",\n  "companyDesc": "<one line company description in Hindi>"\n}\n\nUse your best knowledge of this specific Indian company. All values must be numbers (not strings). Use null only if completely unknown.';
+
+  var txt=await callAI(prompt,700);
+  var clean=txt.replace(/```json|```/g,"").trim();
+  // find JSON object
+  var match=clean.match(/\{[\s\S]*\}/);
+  if(!match)return null;
+  try{return JSON.parse(match[0]);}catch(e){return null;}
+}
+
+// TRIGGER AUTO FILL
+function onNm(v){
+  clearTimeout(ndeb);
+  var st=document.getElementById("afStatus");
+  if(v.length<2){st.style.display="none";return;}
+  ndeb=setTimeout(function(){doAF(v);},1200);
+}
+
+async function doAF(nm){
+  var sec=document.getElementById("sSec").value;
+  document.getElementById("spin").style.display="";
+  var st=document.getElementById("afStatus");
+  st.style.display="";
+  st.innerHTML='<div style="background:#0f172a;border-radius:8px;padding:12px;border:1px solid #6366f133;margin-bottom:10px"><p style="color:#a78bfa;font-size:12px;margin:0">🤖 AI "'+nm+'" ke baare mein research kar raha hai...</p><div class="lbar"><div class="lbar-in"></div></div></div>';
+
+  try{
+    var result=await aiAutoFill(nm,sec);
+    if(!result){
+      st.innerHTML='<div style="background:#0f172a;border-radius:8px;padding:10px;border:1px solid #f8717133;margin-bottom:10px"><p style="color:#f87171;font-size:12px;margin:0">❌ Data nahi mila. Stock naam check karo ya manually fill karo.</p></div>';
+      document.getElementById("spin").style.display="none";
+      return;
+    }
+
+    var filled=0;
+    CR.forEach(function(c){
+      if(result[c.id]!=null){
+        setM(c.id,fmt(result[c.id]),"ai");
+        filled++;
+      }
+    });
+
+    // auto select sector
+    if(result.detectedSector){
+      var secEl=document.getElementById("sSec");
+      for(var i=0;i<secEl.options.length;i++){
+        if(secEl.options[i].text.toLowerCase().includes(result.detectedSector.toLowerCase())||
+           result.detectedSector.toLowerCase().includes(secEl.options[i].text.toLowerCase())){
+          secEl.value=secEl.options[i].value;break;
+        }
+      }
+    }
+
+    updFC();
+    document.getElementById("spin").style.display="none";
+
+    var desc=result.companyDesc||"";
+    st.innerHTML='<div style="background:#0f172a;border-radius:8px;padding:12px;border:1px solid #22c55e33;margin-bottom:10px">'
+      +'<p style="color:#22c55e;font-size:12px;font-weight:600;margin-bottom:4px">✅ AI Auto-fill complete! '+filled+'/10 metrics fill huye</p>'
+      +(desc?'<p style="color:#94a3b8;font-size:11px;margin-bottom:6px">'+desc+'</p>':'')
+      +'<span class="badge ba">🤖 AI Estimated</span>'
+      +' <span style="color:#475569;font-size:10px;margin-left:4px">Screener.in se verify karein</span>'
+      +'</div>';
+  }catch(e){
+    document.getElementById("spin").style.display="none";
+    st.innerHTML='<div style="background:#0f172a;border-radius:8px;padding:10px;border:1px solid #f8717133;margin-bottom:10px"><p style="color:#f87171;font-size:12px;margin:0">❌ Network error. Internet check karo.</p></div>';
+  }
+}
+
+// ANALYSE
+function doAnalyse(){
+  var nm=document.getElementById("sName").value||"Unknown";
+  var sec=document.getElementById("sSec").value;
+  var price=parseFloat(document.getElementById("sPrice").value||0);
+  var qty=parseFloat(document.getElementById("sQty").value||0);
+  var s=getScore(mVals),rat=getRat(s.pct);
+  var mh=CR.map(function(c){
+    var v=parseFloat(mVals[c.id]);
+    if(isNaN(v))return'<div style="font-size:10px;color:#475569;padding:4px 6px;background:#0f172a;border-radius:5px">⬜ '+c.lb+': N/A</div>';
+    var p=chkP(c,v);
+    return'<div style="font-size:10px;color:'+(p?"#86efac":"#fca5a5")+';padding:4px 6px;background:#0f172a;border-radius:5px">'+(p?"✅":"❌")+' '+c.lb+': '+v+c.un+'</div>';
+  }).join("");
+  var ro={nm:nm,sec:sec,score:s.score,pct:s.pct,rat:rat,price:price,qty:qty,curPrice:price};
+  document.getElementById("rbox").innerHTML='<div style="border:2px solid '+rat.cl+';background:'+rat.bg+';border-radius:12px;padding:16px;margin-bottom:16px">'
+    +'<h2 style="color:'+rat.cl+';font-size:18px;margin-bottom:4px">'+rat.lb+'</h2>'
+    +'<p style="color:#cbd5e1;font-size:13px;margin-bottom:10px"><strong>'+nm+'</strong>'+(sec?' • '+sec:'')+'</p>'
+    +'<div class="sbar-bg"><div class="sbar" style="width:'+s.pct+'%;background:'+rat.cl+'"></div></div>'
+    +'<p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Score: <strong style="color:'+rat.cl+'">'+s.score+'/'+CR.length+'</strong> ('+s.pct+'%)</p>'
+    +'<div class="grid2" style="margin-bottom:12px">'+mh+'</div>'
+    +'<button onclick=\'addPf('+JSON.stringify(ro)+')\' style="width:100%;padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">💼 Portfolio Mein Add Karo</button>'
+    +'</div>';
+}
+
+function addPf(r){portfolio=portfolio.filter(function(s){return s.nm!==r.nm;});portfolio.push(r);savePf();alert(r.nm+" portfolio mein add ho gaya! ✅");}
+
+function doReset(){
+  mVals={};mSrc={};
+  CR.forEach(function(c){
+    var el=document.getElementById("m_"+c.id);if(el)el.value="";
+    var pe=document.getElementById("ps_"+c.id);if(pe)pe.textContent="";
+    var se=document.getElementById("sr_"+c.id);if(se)se.innerHTML="";
+    var be=document.getElementById("mb_"+c.id);if(be)be.style.border="none";
+  });
+  ["sName","sSec","sPrice","sQty"].forEach(function(id){var el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("rbox").innerHTML="";
+  document.getElementById("afStatus").style.display="none";
+  document.getElementById("fcnt").textContent="0";
+  document.getElementById("abtn").disabled=true;
+}
+
+// AI ANALYSIS TAB
+async function doAI(){
+  var nm=document.getElementById("aiNm").value.trim();
+  if(!nm){alert("Stock naam daalna zaroori hai!");return;}
+  var sec=document.getElementById("aiSec").value;
+  var extra=document.getElementById("aiExtra").value;
+  var btn=document.getElementById("aibtn");
+  btn.disabled=true;btn.textContent="🤖 AI Soch Raha Hai...";
+  document.getElementById("aiRes").innerHTML='<div class="card ai-thinking"><div style="font-size:40px;margin-bottom:12px">🤖</div><p style="color:#94a3b8">AI analysis kar raha hai...</p><div class="lbar" style="margin-top:12px"><div class="lbar-in"></div></div></div>';
+  try{
+    var prompt='Tum ek expert Indian stock market analyst ho. "'+nm+'" (Sector: '+(sec||"Unknown")+') stock ke baare mein detailed analysis do.\n'+(extra?"Extra info: "+extra:"")+'\nHindi mein jawab do:\n1. 🏢 Company Overview (2-3 lines)\n2. 📈 Multibagger Potential (Strong/Moderate/Weak) - kyun\n3. ✅ Strengths (3-4 points)\n4. ⚠️ Risks (2-3 points)\n5. 🎯 Investment Horizon\n6. 💡 Final Recommendation\nShort, clear aur emojis ke saath likho.';
+    var txt=await callAI(prompt,1000);
+    document.getElementById("aiRes").innerHTML='<div class="card" style="border:1px solid #6366f1"><p class="sec-title" style="color:#a78bfa">🤖 AI Analysis: '+nm+'</p><div style="color:#e2e8f0;font-size:14px;line-height:1.7;white-space:pre-wrap">'+txt+'</div><p style="color:#475569;font-size:10px;margin-top:12px;border-top:1px solid #1e293b;padding-top:8px">⚠️ AI estimate — koi financial advice nahi.</p></div>';
+  }catch(e){
+    document.getElementById("aiRes").innerHTML='<div class="card"><p style="color:#f87171">❌ Error. Internet check karo.</p></div>';
+  }
+  btn.disabled=false;btn.textContent="🤖 AI Se Analyse Karwao";
+}
+
+// COMPARE
+function addCRow(){
+  var i=ccnt++;
+  var d=document.createElement("div");
+  d.style.cssText="background:#0f172a;border-radius:10px;padding:12px;margin-bottom:10px";
+  d.id="cr"+i;
+  var ghtml=CMP.map(function(key){var c=CR.find(function(x){return x.id===key;});return'<input type="number" placeholder="'+c.lb+'" id="cv_'+i+'_'+key+'" style="padding:6px 8px;border-radius:6px;border:1px solid #1e293b;background:#1e293b;color:#f1f5f9;font-size:11px;width:100%">';}).join("");
+  d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<span style="color:#38bdf8;font-weight:700;font-size:13px">Stock '+(i+1)+'</span>'
+    +(i>=2?'<button onclick="this.closest(\'div\').parentNode.removeChild(this.closest(\'div\'))" style="background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px">✕</button>':'')
+    +'</div>'
+    +'<input class="inp" style="margin-bottom:8px" placeholder="Stock naam → AI auto-fill!" id="cn'+i+'" oninput="onCNm('+i+',this.value)"/>'
+    +'<p id="caf'+i+'" style="display:none;color:#a78bfa;font-size:11px;margin-bottom:6px">🤖 AI filled!</p>'
+    +'<div class="grid3">'+ghtml+'</div>';
+  document.getElementById("clist").appendChild(d);
+}
+
+function onCNm(i,v){clearTimeout(cdeb[i]);if(v.length<2)return;cdeb[i]=setTimeout(function(){doCAF(i,v);},1200);}
+
+async function doCAF(i,nm){
+  document.getElementById("cload").style.display="";
+  try{
+    var result=await aiAutoFill(nm,"");
+    if(result){
+      CMP.forEach(function(key){
+        var el=document.getElementById("cv_"+i+"_"+key);
+        if(el&&result[key]!=null)el.value=fmt(result[key]);
+      });
+      var lbl=document.getElementById("caf"+i);if(lbl)lbl.style.display="";
+    }
+  }catch(e){}
+  document.getElementById("cload").style.display="none";
+}
+
+function doCompare(){
+  var rows=document.querySelectorAll("[id^='cr']");
+  var res=[];
+  rows.forEach(function(row){
+    var i=row.id.replace("cr","");
+    var nm=(document.getElementById("cn"+i)||{}).value||"Stock "+(parseInt(i)+1);
+    var vals={};
+    CMP.forEach(function(key){var el=document.getElementById("cv_"+i+"_"+key);if(el)vals[key]=el.value;});
+    var s=getScore(vals);
+    res.push({nm:nm,score:s.score,pct:s.pct,rat:getRat(s.pct)});
+  });
+  res.sort(function(a,b){return b.pct-a.pct;});
+  document.getElementById("cres").innerHTML='<div class="card"><p class="sec-title">🏆 Result</p>'+res.map(function(r,i){return'<div style="background:#0f172a;border-radius:10px;padding:12px;margin-bottom:10px;border:'+(i===0?"2px solid "+r.rat.cl:"1px solid #1e293b")+'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div>'+(i===0?'<span style="background:#facc15;color:#000;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;margin-right:6px">🥇 BEST</span>':'')+'<span style="color:#f1f5f9;font-weight:700">'+r.nm+'</span></div><span style="color:'+r.rat.cl+';font-weight:700">'+r.pct+'%</span></div><div class="sbar-bg" style="height:8px"><div class="sbar" style="width:'+r.pct+'%;background:'+r.rat.cl+'"></div></div><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="color:'+r.rat.cl+';font-size:12px">'+r.rat.lb+'</span><span style="color:#64748b;font-size:12px">'+r.score+'/'+CR.length+' pass</span></div></div>';}).join("")+'</div>';
+}
+
+// PORTFOLIO
+function renderPf(){
+  var box=document.getElementById("pbox");
+  if(portfolio.length===0){box.innerHTML='<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">💼</div><p style="color:#64748b">Portfolio khali hai!</p><p style="color:#475569;font-size:13px;margin-top:8px">Screener se stocks add karo</p></div>';return;}
+  var ti=portfolio.reduce(function(s,p){return s+p.price*p.qty;},0);
+  var tc=portfolio.reduce(function(s,p){return s+(p.curPrice||p.price)*p.qty;},0);
+  var pnl=tc-ti,pp=ti>0?((pnl/ti)*100).toFixed(1):0;
+  var avg=Math.round(portfolio.reduce(function(s,p){return s+p.pct;},0)/portfolio.length);
+  var ar=getRat(avg);
+  box.innerHTML='<div class="grid2" style="margin-bottom:16px">'
+    +'<div class="stat"><p style="color:#64748b;font-size:11px">Total Stocks</p><p style="color:#38bdf8;font-weight:700;font-size:16px;margin-top:4px">'+portfolio.length+'</p></div>'
+    +'<div class="stat"><p style="color:#64748b;font-size:11px">Avg Score</p><p style="color:'+ar.cl+';font-weight:700;font-size:16px;margin-top:4px">'+avg+'%</p></div>'
+    +'<div class="stat"><p style="color:#64748b;font-size:11px">Invested</p><p style="color:#94a3b8;font-weight:700;font-size:14px;margin-top:4px">₹'+ti.toLocaleString("en-IN")+'</p></div>'
+    +'<div class="stat"><p style="color:#64748b;font-size:11px">P&L</p><p style="color:'+(pnl>=0?"#22c55e":"#f87171")+';font-weight:700;font-size:13px;margin-top:4px">'+(pnl>=0?"+":"")+'₹'+Math.abs(pnl).toLocaleString("en-IN")+' ('+pp+'%)</p></div>'
+    +'</div>'
+    +portfolio.map(function(s,i){
+      var bp=s.price,qty=s.qty,cp=s.curPrice||bp,spnl=(cp-bp)*qty,spp=bp>0?(((cp-bp)/bp)*100).toFixed(1):0;
+      return'<div class="pitm" style="border:1px solid '+s.rat.cl+'33;background:#1e293b">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div><p style="font-weight:700;color:#f1f5f9;margin-bottom:2px">'+s.nm+'</p>'
+        +'<p style="color:#64748b;font-size:11px;margin-bottom:6px">'+(s.sec||"—")+'</p>'
+        +'<span style="background:'+s.rat.cl+'22;color:'+s.rat.cl+';font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600">'+s.rat.lb+' • '+s.pct+'%</span></div>'
+        +'<button onclick="rmPf('+i+')" style="background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px">Hatao</button>'
+        +'</div>'
+        +(bp>0?'<div class="grid3" style="margin-top:10px;margin-bottom:8px">'
+          +'<div style="background:#0f172a;border-radius:6px;padding:6px 8px"><p style="color:#64748b;font-size:10px;margin:0">Buy</p><p style="color:#f1f5f9;font-size:13px;font-weight:600;margin:2px 0 0">₹'+bp+'</p></div>'
+          +'<div style="background:#0f172a;border-radius:6px;padding:6px 8px"><p style="color:#64748b;font-size:10px;margin:0">Qty</p><p style="color:#f1f5f9;font-size:13px;font-weight:600;margin:2px 0 0">'+qty+'</p></div>'
+          +'<div style="background:#0f172a;border-radius:6px;padding:6px 8px"><p style="color:#64748b;font-size:10px;margin:0">P&L</p><p style="color:'+(spnl>=0?"#22c55e":"#f87171")+';font-size:12px;font-weight:600;margin:2px 0 0">'+(spnl>=0?"+":"")+'₹'+Math.abs(spnl).toFixed(0)+'<br>('+spp+'%)</p></div>'
+          +'</div>'
+          +'<input type="number" placeholder="Current price (₹)" value="'+(s.curPrice||"")+'" onchange="updPf('+i+',this.value)" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:12px">'
+        :'')
+        +'</div>';
+    }).join("");
+}
+function rmPf(i){if(confirm(portfolio[i].nm+" hatana chahte ho?")){portfolio.splice(i,1);savePf();renderPf();}}
+function updPf(i,v){portfolio[i].curPrice=parseFloat(v)||portfolio[i].price;savePf();renderPf();}
+
+// INIT
+savePf();
+addCRow();addCRow();
+</script>
+</body>
+</html>
